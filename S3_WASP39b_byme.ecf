@@ -1,0 +1,106 @@
+########  Stage 3 ecf file creado 
+
+# Eureka! Control File for Stage 3: Data Reduction
+
+# Stage 3 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-3
+
+ncpu            4           # Number of CPUs a usar cuando se corre eureka!
+## LOS TENIA EN 1 Y CAMBIE A 4 POR EL TEMPLATE pero de la main branch
+## el de la v 0.10 lo tiene en 1 asi que lo volvi a cambiar
+nfiles          1           # The number of data files to analyze simultaneously
+max_memory      0.5         # (0–1), mejor <=.5 The maximum fraction of memory you want utilized by read-in frames (this will reduce nfiles if need be)
+indep_batches   False       # Strongly recommended to leave this as False. Independently treat each batch of files? Strongly recommended to leave this as False unless you have a clear reason to set it to True.
+###### EN EL DEMO V0.10 NO APARECE INDEP_BATCHES
+suffix          calints     # Data file suffix
+
+######## elegir true or false
+calibrated_spectra  False   # Set True to generate flux-calibrated spectra/photometry in mJy
+                            # Set False to convert to electrons
+
+# Subarray region of interest
+## elegir la sección que te interesa 
+######## elegiiiiirrrr
+#ywindow         [10,21]      # Vertical axis as seen in DS9      nrs1
+ywindow         [0,32]      # Vertical axis as seen in DS9     nrs2
+
+#xwindow         [567,2048]    # Horizontal axis as seen in DS9    nrs1
+xwindow         [5,1950]    # Horizontal axis as seen in DS9    nrs2
+
+
+### agregue por el error actual dif size arrays
+#gain            True
+### LO VOLVI A COMENTAR PARA EL RUN DE MAST, pero lo descomente por el error de operands shapes
+
+
+## Gaussian adecuado para fuentes puntuales (como el caso de wasp 39)
+src_pos_type    gaussian    # Determine source position when not given in header (Options: header, gaussian, weighted, max, or hst)
+######## yo elijo gaussian
+record_ypos     True        # Option to record the y position and width for each integration (only records if src_pos_type is gaussian)
+dqmask          True        # Mask pixels with an odd entry in the DQ array
+######## vamos a ver como salen los resultados con 2
+expand          1           # Ayuda a mejorar la resolución, p or ejemplo, un expand de 2 duplicaría la resolución en esa dirección. // Super-sampling factor along cross-dispersion direction
+## LO TENIA EN 2 Y LO CAMBIE A 1 POR EL TEMPLATE
+
+# Outlier rejection along time axis
+####### la TD de WASP 39 en el ERS es de ~2% so false? Si dejarlo en false porque si es mas como deep transit
+ff_outlier      False       # Set False to use only background region (recommended for deep transits)
+                            # Set True to use full frame (works well for shallow transits/eclipses)
+                            ## Be sure to check the percentage of pixels that were flagged while ff_outlier = True; the value should be << 1% when bg_thresh = [5,5].
+bg_thresh       [4,4]       ## itera dos veces buscando outliers con desviaciones mayores a 4. // Double-iteration X-sigma threshold for outlier rejection along time axis
+
+# Background parameters
+##  yo creo que lo mas importante a determinar
+bg_hw           10           # Half-width of exclusion region for BG subtraction (relative to source position)
+###########  se determina con ds9 ???
+bg_deg          0           # Polynomial order for column-by-column background subtraction, -1 for median of entire frame
+########### determinar que metodo le va mejor a los datos 
+bg_method       mean        ## metodo para calcular sigma Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
+########### determinar cual std es la mejor
+
+# # # # # lo cambio de 10 a 15
+p3thresh        15          # X-sigma threshold for outlier rejection during background subtraction
+
+# Spectral extraction parameters
+spec_hw         10           # Half-width of aperture region for spectral extraction (relative to source position)
+fittype         meddata     ## Method for constructing spatial profile (Options: smooth, meddata, poly, gauss, wavelet, or wavelet2D)
+### for jwst meddata or smooth is recommended
+## lo cambie a smooth xq asi estaba la template de v0.10
+median_thresh   5           ## Sigma threshold when flagging outliers in median frame, when fittype=meddata and window_len > 1
+### puedo probar con 5 primero, el default
+window_len      13          ## toma los valores alrededor del punto, 6 y 6, saca un promedio y sustituye el pixel central por ese valor, Smoothing window length, for median frame or when fittype = smooth or meddata (when computing median frame). Can set to 1 for no smoothing when computing median frame for fittype=meddata.
+### puedo probar con esto y ver como funciona
+prof_deg        3           # Polynomial degree, when fittype = poly
+
+
+# # # # # lo cambio de 10 a 15
+p5thresh        15          # # X-sigma threshold for outlier rejection while constructing spatial profile
+# # # # # lo cambio de 60 a 70
+p7thresh        70          # # X-sigma threshold for outlier rejection during optimal spectral extraction
+
+# G395H curvature treatment
+## para NIRSpec/G395 usar correrct en vez de None !!!!!
+## es un efecto del instrumento cuando dispersa la luz
+curvature       correct        # How to manage the curved trace on the detector (Options: None, correct). Use correct for NIRSpec/G395.
+##### lo devolvi a correct porque según yo G395H si tiene curvatura
+
+
+# Diagnostics
+isplots_S3      5           ## Generate few (1), some (3), or many (5) figures (Options: 1 - 5)
+nplots          5           ## How many of each type of figure do you want to make per file?
+
+## cual es la figura 3101??
+vmin            0.97        # Sets the vmin of the color bar for Figure 3101.
+vmax            1.03        # Sets the vmax of the color bar for Figure 3101.
+time_axis       'y'         # Determines whether the time axis in Figure 3101 is along the y-axis ('y') or the x-axis ('x')
+
+testing_S3      True       ## If set to True only the last segment (which is usually the smallest) in the inputdir will be run. Also, only five integrations from the last segment will be reduced. Boolean, set True to only use last file and generate select figures
+hide_plots      False       # If True, plots will automatically be closed rather than popping up
+save_output     True        # Save outputs for use in S4
+verbose         True        # If True, more details will be printed about steps
+
+# Project directory
+topdir          /home/iaunam/1st_trial_eureka/
+
+# Directories relative to topdir
+inputdir        Stage2nrs2   # The folder containing the outputs from Eureka!'s S2 or JWST's S2 pipeline (will be overwritten if calling S2 and S3 sequentially)
+outputdir       Stage3nrs2
