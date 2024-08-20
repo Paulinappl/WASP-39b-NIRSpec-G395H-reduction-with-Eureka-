@@ -1,0 +1,163 @@
+### ECF FILE HECHO POR PAULINA DESDE EL 24 DE JULIO DEL 2024
+######## los que tienen 8 # son comentarios mios para ver si cambio o no el parametro
+
+
+# Eureka! Control File for Stage 1: Detector Processing
+# Stage 1 Documentation: https://eurekadocs.readthedocs.io/en/latest/ecf.html#stage-1
+
+suffix              uncal   ## sufijo del Stage 0 JWST dat,uncal.fits
+
+maximum_cores       'half'  #Options are 'none', quarter', 'half', 'all'
+## Fraction of processor cores to use when computing the jump step and the ramp fits.
+## entiendo son los procesadores de la compu (yo tengo 8)
+
+# Control ramp fitting method
+ramp_fit_algorithm  'default'   #Options are 'default', 'mean', or 'differenced'
+ramp_fit_max_cores  'half'         ################################################# la linea que le añadi en el primer bug al correr
+## Algorithm to use to fit a ramp to the frame-level images of uncalibrated files. Only default (i.e. the JWST pipeline) and mean can be used currently.
+
+# Pipeline stages 
+## AL FINAL ESTA CADA FUNCIÓN: https://jwst-pipeline.readthedocs.io/en/latest/jwst/pipeline/calwebb_detector1.html
+
+skip_group_scale    False ## rescales pixel values in raw JWST science data products to correct for instances where on-board frame averaging did not result in the proper downlinked values.
+## cuando el numero de frames en un grupo no es una potencia de 2, la pipeline no hace bien el promedio de los frames, entonces se tiene que corregir: NFRAMES =! NDIVISORES (Estan en el header)
+
+
+skip_dq_init        False ## The Data Quality (DQ) initialization step in the calibration pipeline populates the DQ mask for the input dataset. Flag values from the appropriate static mask (“MASK”) reference file in CRDS are copied into the “PIXELDQ” array of the input dataset, because it is assumed that flags in the mask reference file pertain to problem conditions that affect all groups and integrations for a given pixel.
+## identifica y señala los pixeles que tienen "problemas" (ej: cosmic ray or saturated pixels) en un mask y los señala en los datos tambien
+
+
+skip_saturation     False ##  step flags pixels at or below the A/D floor or above the saturation threshold. Pixels values are flagged as saturated if the pixel value is larger than the defined saturation threshold. Pixel values are flagged as below the A/D floor if they have a value of zero DN.
+## idenifica a los pixeles saturados, con nans, y valores negativos o de 0
+
+
+skip_ipc            True    #Skipped by default for all instruments
+
+
+
+skip_superbias      False ## The superbias subtraction step removes the fixed detector bias from a science data set by subtracting a superbias reference image.
+## le resta el superbias a los datos (superbias: the average or combined bias over many observations)
+
+skip_refpix         False ## corrects this drift:the readout electronics imposes its own signal on top of this. In its simplest form, the amplifiers add a constant value to each pixel, and this constant value is different from amplifier to amplifier in a given group, and varies from group to group for a given amplifier.
+## corrige el ruido ocasionado por los amplificadores y los demás electronicos para leer la señal.
+
+skip_linearity      False ## The linearity step applies the “classic” linearity correction adapted from the HST WFC3/IR linearity correction routine, correcting science data values for detector non-linearity. The correction is applied pixel-by-pixel, group-by-group, integration-by-integration within a science exposure. The correction is represented by an nth-order polynomial for each pixel in the detector, with n+1 arrays of coefficients read from the linearity reference file.
+## los pixeles no responden linealmente a la luz, este paso corrige esta respuesta NO uniforme del detector
+
+skip_persistence    True    #Skipped by default for Near-IR TSO
+
+skip_dark_current   False ## The dark current step removes dark current from an exposure by subtracting dark current data stored in a dark reference file in CRDS.
+## se restan los darks a los datos, en el CRDS, segun  el handbook of astronomy la dark current es el ruido termico del detector
+
+
+##### HASTA AQUI CORRIO EN LA TERMINAL CUANDO NO TENIA EL ARCHIVO DE 40 GB DE SWAP MEMORY
+
+skip_jump           False ## This step finds and flags outliers (usually caused by cosmic-ray hits) in each pixel of an “up the ramp” IR exposure.
+## flaggea los jumps en los ramps, cuando hay más de 3 grupos, para así remover los grupos donde hubo un brinco abrupto
+
+skip_ramp_fitting   False ## This step determines the mean count rate, in units of counts per second, for each pixel by performing a linear fit to the “up the ramp” data in the input file. All fitting is done using the “ordinary least squares” (OLS) method. The fit is performed independently for each pixel. Bad values flagged via DQ flags are rejected from the fits.
+##  obtiene las cuentas/tiempo de cada pixel en una imagen
+
+
+skip_gain_scale     False ##  rescales pixel values in JWST countrate science data products in order to correct for the effect of using a non-standard detector gain setting. The countrate data are rescaled to make them appear as if they had been obtained using the standard gain setting. This currently only applies to NIRSpec exposures that are read out using a subarray pattern, in which case a gain setting of 2 is used instead of the standard setting of 1. Note that this only applies to NIRSpec subarray data obtained after April 2017, which is when the change was made in the instrument flight software to use gain=2. NIRSpec subarray data obtained previous to that time used the standard gain=1 setting.
+## corrige para que la respuesta de los pixeles sea pareja
+
+#Pipeline stages parameters
+jump_rejection_threshold  4.0 #float, default is 4.0, CR sigma rejection threshold
+
+######## deberia dejarlo asi???
+
+## numero de desviaciones estadard de la media para que un pixel se considere que hubo jump
+
+
+# Custom linearity reference file
+custom_linearity    True
+linearity_file      /home/iaunam/Escritorio/MAST_WASP_39/MAST_2024-07-11T03_29_25.373Z/JWST/jwst_nirspec_linearity_0023.fits
+
+# Custom bias when using NIRSpec G395H
+## Method applied to correct the superbias using a scale factor (SF) when no bias pixels are available (i.e., with NIRSpec). Here, SF = (median of group)/(median of superbias), using a background region that is expand_mask pixels from the measured trace. The default option None applies no correction; group_level computes SF for every integration in bias_group; smooth applies a smoothing filter of length bias_smooth_length to the group_level SF values; and mean uses the mean SF over all integrations. For NIRSpec, we currently recommend using smooth with a bias_smooth_length that is ~15 minutes.
+
+##  For NIRSpec, we currently recommend using smooth with a bias_smooth_length that is ~15 minutes. (info del read the docs)
+bias_correction     smooth    # Bias correction options: [mean, group_level, smooth, None]
+bias_group          1       # Group number options: [1, 2, ..., each] For NIRSpec, we currently recommend using the first group (bias_group = 1). 
+bias_smooth_length  15     # Window length when using 'smooth' bias correction, ANTES ERA 201
+######## deberia dejar en false a custom_bias?, yo creo que si a menos que haga el mio
+
+custom_bias         True
+superbias_file      /home/iaunam/Escritorio/MAST_WASP_39/MAST_2024-07-11T03_29_25.373Z/JWST/jwst_nirspec_superbias_0429.fits
+# Saturation
+## lo dejare el primero en false para probar el default
+## si quiero probar pondré en true el primero
+
+update_sat_flags    False   # Wheter to update the saturation flags more aggressively
+expand_prev_group   False   # Expand saturation flags to previous group
+dq_sat_mode         percentile # Options: [percentile, min, defined]
+dq_sat_percentile   50      # Percentile of the entire time series to use to define the saturation mask (50=median)
+dq_sat_columns      [[0, 0], [0,0], [0,0], [0,0], [0,0]]  #for dq_sat_mode = defined, user defined saturated columns
+
+# Background subtraction
+
+########  deberia estar en true??? y cuales parametros???
+#### me parece que la figura es de 0 a 32 en y
+grouplevel_bg       True
+ncpu                6
+bg_y1               6 ## The pixel number for the end of the bottom background region. The background region goes from the bottom of the subarray to this pixel.
+bg_y2               26 ## The pixel number for the start of the top background region. The background region goes from this pixel to the top of the subarray.
+bg_deg              0 ## Sets the degree of the column-by-column background subtraction. If bg_deg is negative, use the median background of entire frame. Set to None for no background subtraction. Also, best to emphasize that we’re performing column-by-column BG subtraction
+p3thresh            5 ## Only important if bg_deg => 0 (see above). # sigma threshold for outlier rejection during background subtraction which corresponds to step 3 of optimal spectral extraction, as defined by Horne (1986).
+######################################### añadi estas #################################################
+bg_method           median  # Options: std (Standard Deviation), median (Median Absolute Deviation), mean (Mean Absolute Deviation)
+bg_row_by_row       False   # Row-by-row BG subtraction (only useful for NIRCam)
+bg_x1               None    # Left edge of exclusion region for row-by-row BG subtraction
+bg_x2               None    # Right edge of exclusion region for row-by-row BG subtraction
+########################################################################################################
+
+##  probare estos parametros primero
+verbose             True ## If True, more details will be printed about steps.
+isplots_S1          3 ## Sets how many plots should be saved when running Stage 1. A full description of these outputs is available here: Stage 3 Output
+nplots              5 ## Sets how many integrations will be used for per-integration figures (Figs 3301, 3302, 3303, 3307, 3501, 3505). Useful for in-depth diagnoses of a few integrations without making thousands of figures. If set to None, a plot will be made for every integration.
+hide_plots          True ## If True, plots will automatically be closed rather than popping up on the screen.
+
+# Mask curved traces
+## hacer una mascara al rededor del espectro
+## no termino de entender porque hacer este paso
+masktrace           True ## Boolean, creates a mask centered on the trace prior to GLBS for curved traces
+window_len          11   ## Smoothing length for the trace location
+## means that each point in the smoothed trace is the average of 5 points on either side of the central point.
+expand_mask         8    ## Aperture (in pixels) around the trace to mask
+## pixeles incluidos ademas del trace
+ignore_low          600  ## Columns below this index will not be used to create the mask
+## se toman las columnas a partir de la 600
+ignore_hi           None ## Columns above this index will not be used to create the mask
+## se toman las columnas hasta none, entonces supongo que hasta donde termina el array
+
+# Manual reference pixel correction for NIRSpec PRISM 
+#########  when not subtracting BG (y si lo substraje) y es para PRISM !!!!
+refpix_corr         False ## Boolean, runs a custom ROEBA (Row-by-row, Odd-Even By Amplifier) routine for PRISM observations which do not have reference pixels within the subarray.
+npix_top            8
+npix_bot            8
+
+
+# Project directory
+topdir              /home/iaunam/1st_trial_eureka/ ## The path to the directory containing the Stage 0 JWST data (uncal.fits). Directories containing spaces should be enclosed in quotation marks.
+
+# Directories relative to topdir
+inputdir            1st_try_MAST_WASP39 ## same as tobdir
+outputdir           Stage1nrs2
+
+# Diagnostics
+testing_S1          False  ## If True, only a single file will be used, outputs won’t be saved, and plots won’t be made. Useful for making sure most of the code can run.
+
+
+
+#####
+
+# "Default" ramp fitting settings
+
+default_ramp_fit_weighting          default             #Options are "default", "fixed", "interpolated", "flat", or "custom"
+## Define the method by which individual frame pixels will be weighted during the default ramp fitting process.
+
+## estos parametros de abajo se usan cuando no es default
+default_ramp_fit_fixed_exponent     10                  #Only used for "fixed" weighting
+default_ramp_fit_custom_snr_bounds  [5,10,20,50,100]    # Only used for "custom" weighting, array no spaces
+default_ramp_fit_custom_exponents   [0.4,1,3,6,10]      # Only used for "custom" weighting, array no spaces
